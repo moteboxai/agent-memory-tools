@@ -19,6 +19,7 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 import re
+import sys
 
 class MemorySearcher:
     def __init__(self, memory_dir=None):
@@ -94,7 +95,15 @@ class MemorySearcher:
         return files
     
     def get_content(self, paths):
-        return {Path(p).name: open(p).read() for p in paths}
+        result = {}
+        for p in paths:
+            real = os.path.realpath(p)
+            mem_real = os.path.realpath(str(self.memory_dir)) + os.sep
+            if not real.startswith(mem_real) and real != mem_real.rstrip(os.sep):
+                raise ValueError(f"Path traversal blocked: {p} resolves outside memory directory")
+            with open(real, 'r', encoding='utf-8') as f:
+                result[Path(real).name] = f.read()
+        return result
 
 def main():
     p = argparse.ArgumentParser(description="Search agent memory files")
@@ -108,7 +117,12 @@ def main():
     s = MemorySearcher(args.memory_dir)
     if args.cmd == 'index': s.index_memory_files()
     elif args.cmd == 'search':
-        results = s.search(args.query, args.limit)
+        # Sanitize FTS5 query to prevent injection
+        safe_query = re.sub(r'[^\w\s\-]', '', args.query or '')
+        if len(safe_query) > 500:
+            print("Error: query too long (max 500 chars)")
+            sys.exit(1)
+        results = s.search(safe_query, args.limit)
         print(json.dumps(results, indent=2) if args.json else
               '\n'.join(f"{r['file']} ({r['date']}): {r['snippet'][:80]}..." for r in results))
     elif args.cmd == 'timeline':

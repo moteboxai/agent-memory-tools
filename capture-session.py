@@ -12,6 +12,7 @@ Requires: Python 3.8+
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -31,7 +32,7 @@ class SessionCapture:
                     break
             else:
                 memory_dir = Path.cwd()
-        self.memory_dir = Path(memory_dir)
+        self.memory_dir = Path(os.path.realpath(memory_dir))
         self.memory_dir.mkdir(exist_ok=True)
     
     def _extract_tags(self, text):
@@ -73,6 +74,9 @@ class SessionCapture:
     def compress(self, conversation, title=None):
         ts = datetime.now()
         date_str = ts.strftime('%Y-%m-%d')
+        # Sanitize title to prevent path traversal
+        if title:
+            title = re.sub(r'[^\w\s\-]', '', title).strip()[:100]
         decisions, actions, insights, questions = [], [], [], []
         for line in conversation.split('\n'):
             line = line.strip()

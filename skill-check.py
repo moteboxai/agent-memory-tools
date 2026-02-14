@@ -73,10 +73,23 @@ def main():
         sys.exit(0)
     
     skill_name = sys.argv[1]
+    # Input validation
+    if len(skill_name) > 200:
+        print("Error: skill name too long (max 200 chars)")
+        sys.exit(2)
+    # Strip anything that isn't alphanumeric, dash, underscore, dot, or slash
+    import re
+    if not re.match(r'^[\w\-\./@ ]+$', skill_name):
+        print("Error: invalid characters in skill name")
+        sys.exit(2)
     author = None
     if '--author' in sys.argv:
         idx = sys.argv.index('--author')
-        if idx + 1 < len(sys.argv): author = sys.argv[idx + 1]
+        if idx + 1 < len(sys.argv):
+            author = sys.argv[idx + 1]
+            if len(author) > 200:
+                print("Error: author name too long (max 200 chars)")
+                sys.exit(2)
     
     print(f"Checking skill: {skill_name}")
     if author: print(f"Author: {author}")
